@@ -28,28 +28,41 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useState, useEffect } from "react";
+import api from "@/lib/axios";
 
 const AdminUsers = () => {
-    const users = [
-        { id: 'U-1001', name: 'สมชาย ใจดี', email: 'somchai@example.com', role: 'User', status: 'Active', joinDate: '01/12/2023', avatar: null },
-        { id: 'U-1002', name: 'วิภาดา รักดี', email: 'wipada@example.com', role: 'Verified User', status: 'Active', joinDate: '15/12/2023', avatar: 'https://github.com/shadcn.png' },
-        { id: 'U-1003', name: 'Admin One', email: 'admin1@lostfound.com', role: 'Admin', status: 'Active', joinDate: '01/11/2023', avatar: null },
-        { id: 'U-1004', name: 'John Doe', email: 'john@example.com', role: 'User', status: 'Suspended', joinDate: '20/12/2023', avatar: null },
-        { id: 'U-1005', name: 'Sarah Connor', email: 'sarah@example.com', role: 'User', status: 'Active', joinDate: '05/01/2024', avatar: null },
-    ];
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState('');
 
-    const getStatusBadge = (status) => {
-        switch (status) {
-            case 'Active': return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">ใช้งานปกติ</Badge>;
-            case 'Suspended': return <Badge variant="destructive" className="bg-rose-100 text-rose-700 border-rose-200">ระงับการใช้งาน</Badge>;
-            default: return <Badge variant="outline">ไม่ทราบสถานะ</Badge>;
+    useEffect(() => {
+        const fetchUsers = async () => {
+            try {
+                const res = await api.get('/admin/users', {
+                    params: { search }
+                });
+                setUsers(res.data);
+            } catch (err) {
+                console.error('Failed to fetch users:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchUsers();
+    }, [search]);
+
+    const getStatusBadge = (isSuspended) => {
+        if (isSuspended) {
+            return <Badge variant="destructive" className="bg-rose-100 text-rose-700 border-rose-200">ระงับการใช้งาน</Badge>;
         }
+        return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">ใช้งานปกติ</Badge>;
     };
 
     const getRoleBadge = (role) => {
         switch (role) {
-            case 'Admin': return <Badge variant="secondary" className="bg-indigo-100 text-indigo-700 border-indigo-200"><Shield size={12} className="mr-1" /> ผู้ดูแลระบบ</Badge>;
-            case 'Verified User': return <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-200">ยืนยันตัวตนแล้ว</Badge>;
+            case 'admin': return <Badge variant="secondary" className="bg-indigo-100 text-indigo-700 border-indigo-200"><Shield size={12} className="mr-1" /> ผู้ดูแลระบบ</Badge>;
+            case 'staff': return <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-200">เจ้าหน้าที่</Badge>;
             default: return <Badge variant="outline" className="text-slate-600">ผู้ใช้งานทั่วไป</Badge>;
         }
     };
@@ -73,6 +86,8 @@ const AdminUsers = () => {
                         <Input
                             placeholder="ค้นหาชื่อ, อีเมล, หรือ ID..."
                             className="pl-10 bg-white border-slate-200 focus-visible:ring-indigo-500/20 shadow-sm"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
                     <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -99,23 +114,23 @@ const AdminUsers = () => {
                         </TableHeader>
                         <TableBody>
                             {users.map((user) => (
-                                <TableRow key={user.id} className="hover:bg-slate-50 transition-all border-b border-slate-100 last:border-0">
-                                    <TableCell className="font-mono text-xs font-semibold text-slate-500">{user.id}</TableCell>
+                                <TableRow key={user._id} className="hover:bg-slate-50 transition-all border-b border-slate-100 last:border-0">
+                                    <TableCell className="font-mono text-[10px] font-semibold text-slate-500">{user._id.substring(0, 8)}...</TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-3">
                                             <Avatar className="h-9 w-9 border border-slate-200">
                                                 <AvatarImage src={user.avatar} />
-                                                <AvatarFallback className="bg-slate-100 text-slate-600 font-bold">{user.name.charAt(0)}</AvatarFallback>
+                                                <AvatarFallback className="bg-slate-100 text-slate-600 font-bold">{user.firstname.charAt(0)}</AvatarFallback>
                                             </Avatar>
                                             <div className="flex flex-col">
-                                                <span className="font-bold text-slate-800 text-sm">{user.name}</span>
+                                                <span className="font-bold text-slate-800 text-sm">{user.firstname} {user.lastname}</span>
                                                 <span className="text-xs text-slate-500">{user.email}</span>
                                             </div>
                                         </div>
                                     </TableCell>
                                     <TableCell>{getRoleBadge(user.role)}</TableCell>
-                                    <TableCell className="text-sm text-slate-600">{user.joinDate}</TableCell>
-                                    <TableCell>{getStatusBadge(user.status)}</TableCell>
+                                    <TableCell className="text-sm text-slate-600">{new Date(user.createdAt).toLocaleDateString()}</TableCell>
+                                    <TableCell>{getStatusBadge(user.isSuspended)}</TableCell>
                                     <TableCell className="text-right">
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>

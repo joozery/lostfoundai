@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import {
     Table,
     TableBody,
@@ -17,7 +18,9 @@ import {
     Search,
     UserPlus,
     Mail,
-    KeyRound
+    KeyRound,
+    Loader2,
+    RefreshCw
 } from "lucide-react";
 import {
     DropdownMenu,
@@ -28,118 +31,189 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import api from '../../lib/axios';
 
 const AdminStaff = () => {
-    // Mock Data for Staff
-    const staffMembers = [
-        { id: 'ST-001', name: 'Admin Administrator', email: 'admin@lostfound.com', role: 'Super Admin', status: 'Active', lastActive: 'Now', avatar: 'https://github.com/shadcn.png' },
-        { id: 'ST-002', name: 'Support Team A', email: 'support.a@lostfound.com', role: 'Support', status: 'Active', lastActive: '5m ago', avatar: null },
-        { id: 'ST-003', name: 'Moderator One', email: 'mod.one@lostfound.com', role: 'Moderator', status: 'Offline', lastActive: '2h ago', avatar: null },
-    ];
+    const [staffMembers, setStaffMembers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const fetchStaff = async () => {
+        try {
+            setLoading(true);
+            // Fetch all users and filter by role admin/staff on the frontend 
+            // OR we can adjust the API. For now, let's fetch all and filter for roles.
+            const res = await api.get('/admin/users');
+            const filteredStaff = res.data.filter(u => u.role === 'admin' || u.role === 'staff');
+            setStaffMembers(filteredStaff);
+        } catch (err) {
+            console.error("Failed to fetch staff members", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchStaff();
+    }, []);
+
+    const filteredItems = staffMembers.filter(staff =>
+        staff.firstname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        staff.lastname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        staff.email.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     const getRoleBadge = (role) => {
         switch (role) {
-            case 'Super Admin': return <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-200 border-purple-200"><ShieldAlert size={12} className="mr-1" /> Super Admin</Badge>;
-            case 'Moderator': return <Badge className="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border-indigo-200"><ShieldCheck size={12} className="mr-1" /> Moderator</Badge>;
-            case 'Support': return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200"><Shield size={12} className="mr-1" /> Support</Badge>;
-            default: return <Badge variant="outline">Staff</Badge>;
+            case 'admin': return <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-200 border-purple-200 shadow-sm font-bold uppercase text-[10px]"><ShieldAlert size={12} className="mr-1.5" /> Super Admin</Badge>;
+            case 'staff': return <Badge className="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border-indigo-200 shadow-sm font-bold uppercase text-[10px]"><ShieldCheck size={12} className="mr-1.5" /> Staff (Editor)</Badge>;
+            default: return <Badge variant="outline" className="text-slate-500 font-bold uppercase text-[10px]">Staff</Badge>;
+        }
+    };
+
+    const handleUpdateUserStatus = async (userId, isSuspended) => {
+        if (window.confirm(`คุณต้องการ ${isSuspended ? 'ระงับสิทธิ์' : 'เปิดใช้งาน'} ผู้ดูแลท่านนี้ใช่หรือไม่?`)) {
+            try {
+                await api.put(`/admin/users/${userId}`, { isSuspended });
+                fetchStaff();
+            } catch (err) {
+                console.error("Update failed", err);
+            }
         }
     };
 
     return (
-        <div className="space-y-6 max-w-7xl mx-auto font-sans">
+        <div className="space-y-6 max-w-7xl mx-auto font-sans pb-10">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                    <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 flex items-center gap-3">
-                        <div className="p-2 bg-purple-100 rounded-lg">
-                            <ShieldCheck className="text-purple-600 h-6 w-6" />
+                    <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 flex items-center gap-4">
+                        <div className="p-2.5 bg-purple-100 rounded-2xl shadow-sm">
+                            <ShieldCheck className="text-purple-600 h-7 w-7" />
                         </div>
-                        จัดการผู้ดูแล (Staff)
+                        จัดการทีมผู้ดูแล (Staff Management)
                     </h2>
-                    <p className="text-slate-500 mt-1 ml-14">จัดการสิทธิ์และบัญชีผู้ดูแลระบบ</p>
+                    <p className="text-slate-500 mt-2 ml-1">จัดการบัญชีและกำหนดสิทธิ์การเข้าถึงระบบสำหรับเจ้าหน้าที่และแอดมิน</p>
                 </div>
-                <Button className="gap-2 bg-purple-600 hover:bg-purple-700 shadow-lg shadow-purple-200 font-bold">
+                <Button className="gap-2 bg-purple-600 hover:bg-purple-700 h-11 px-6 rounded-xl shadow-lg shadow-purple-200 font-bold transition-all active:scale-95">
                     <UserPlus size={18} /> เพิ่มผู้ดูแลใหม่
                 </Button>
             </div>
 
-            <div className="bg-white rounded-xl border border-slate-200 shadow-lg shadow-slate-200/40 overflow-hidden">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/40 overflow-hidden">
                 {/* Toolbar */}
-                <div className="p-4 border-b border-slate-200 bg-purple-50/30 flex flex-col sm:flex-row gap-4 justify-between items-center">
+                <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row gap-4 justify-between items-center">
                     <div className="relative w-full sm:w-96 group">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-purple-500 transition-colors" />
                         <Input
-                            placeholder="ค้นหาชื่อ, อีเมล..."
-                            className="pl-10 bg-white border-slate-200 focus-visible:ring-purple-500/20 shadow-sm"
+                            placeholder="ค้นหาชื่อ หรือ อีเมลผู้ดูแล..."
+                            className="pl-10 h-11 bg-white border-slate-200 focus-visible:ring-purple-500/20 shadow-sm rounded-xl font-medium"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
+                    <Button variant="ghost" onClick={fetchStaff} className="text-slate-400 hover:text-purple-600 gap-2">
+                        <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+                        รีเฟรชข้อมูล
+                    </Button>
                 </div>
 
-                <div className="relative w-full overflow-auto">
-                    <Table>
-                        <TableHeader className="bg-slate-50/80 sticky top-0 z-10 backdrop-blur-sm">
-                            <TableRow className="hover:bg-transparent border-slate-200">
-                                <TableHead className="font-bold text-slate-700 w-[100px]">ID</TableHead>
-                                <TableHead className="font-bold text-slate-700">ผู้ดูแล</TableHead>
-                                <TableHead className="font-bold text-slate-700">ตำแหน่ง</TableHead>
-                                <TableHead className="font-bold text-slate-700">สถานะ</TableHead>
-                                <TableHead className="font-bold text-slate-700">ใช้งานล่าสุด</TableHead>
-                                <TableHead className="text-right font-bold text-slate-700">จัดการ</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {staffMembers.map((staff) => (
-                                <TableRow key={staff.id} className="hover:bg-slate-50 transition-all border-b border-slate-100 last:border-0">
-                                    <TableCell className="font-mono text-xs font-semibold text-slate-500">{staff.id}</TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-3">
-                                            <Avatar className="h-9 w-9 border border-slate-200">
-                                                <AvatarImage src={staff.avatar} />
-                                                <AvatarFallback className="bg-purple-100 text-purple-700 font-bold">{staff.name.charAt(0)}</AvatarFallback>
-                                            </Avatar>
-                                            <div className="flex flex-col">
-                                                <span className="font-bold text-slate-800 text-sm">{staff.name}</span>
-                                                <span className="text-xs text-slate-500">{staff.email}</span>
-                                            </div>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>{getRoleBadge(staff.role)}</TableCell>
-                                    <TableCell>
-                                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${staff.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
-                                            }`}>
-                                            <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${staff.status === 'Active' ? 'bg-emerald-500' : 'bg-slate-400'
-                                                }`}></span>
-                                            {staff.status}
-                                        </span>
-                                    </TableCell>
-                                    <TableCell className="text-sm text-slate-600 font-mono">{staff.lastActive}</TableCell>
-                                    <TableCell className="text-right">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" className="h-8 w-8 p-0 text-slate-400 hover:text-slate-800 rounded-full">
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuLabel>Account Action</DropdownMenuLabel>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem className="cursor-pointer">
-                                                    <KeyRound className="mr-2 h-4 w-4 text-slate-500" /> เปลี่ยนรหัสผ่าน
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem className="cursor-pointer">
-                                                    <Mail className="mr-2 h-4 w-4 text-slate-500" /> ส่งข้อความ
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem className="cursor-pointer text-rose-600 focus:text-rose-700 focus:bg-rose-50">
-                                                    ระงับสิทธิ์การใช้งาน
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
+                <div className="relative w-full overflow-auto text-sm">
+                    {loading ? (
+                        <div className="p-20 flex flex-col items-center justify-center gap-4 text-center">
+                            <Loader2 className="h-10 w-10 animate-spin text-purple-600" />
+                            <p className="text-slate-400 font-semibold italic">กำลังดึงรายชื่อเจ้าหน้าที่จากฐานข้อมูล...</p>
+                        </div>
+                    ) : (
+                        <Table>
+                            <TableHeader className="bg-slate-50/80 sticky top-0 z-10 backdrop-blur-md">
+                                <TableRow className="hover:bg-transparent border-slate-200 h-14">
+                                    <TableHead className="font-bold text-slate-800 px-6">ผู้ดูแล</TableHead>
+                                    <TableHead className="font-bold text-slate-800">สิทธิ์การใช้งาน (Role)</TableHead>
+                                    <TableHead className="font-bold text-slate-800">สถานะ</TableHead>
+                                    <TableHead className="font-bold text-slate-800">เข้าร่วมเมื่อ</TableHead>
+                                    <TableHead className="text-right font-bold text-slate-800 pr-6">จัดการบัญชี</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredItems.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="h-60 text-center text-slate-400">
+                                            <div className="flex flex-col items-center gap-2">
+                                                <Search size={40} className="text-slate-200" />
+                                                <p className="font-medium">ไม่พบข้อมูลผู้ดูแลที่คุณกำลังค้นหา</p>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    filteredItems.map((staff) => (
+                                        <TableRow key={staff._id} className="hover:bg-slate-50/50 transition-all border-b border-slate-100 last:border-0 h-20">
+                                            <TableCell className="px-6">
+                                                <div className="flex items-center gap-4">
+                                                    <Avatar className="h-10 w-10 border-2 border-slate-100 shadow-sm">
+                                                        <AvatarImage src={staff.avatar} />
+                                                        <AvatarFallback className="bg-purple-100 text-purple-700 font-black text-xs">
+                                                            {staff.firstname?.charAt(0)}{staff.lastname?.charAt(0)}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <div className="flex flex-col">
+                                                        <span className="font-bold text-slate-900 group-hover:text-purple-600 transition-colors uppercase tracking-tight">
+                                                            {staff.firstname} {staff.lastname}
+                                                        </span>
+                                                        <span className="text-xs text-slate-500 font-medium inline-flex items-center gap-1">
+                                                            <Mail size={10} className="text-slate-300" /> {staff.email}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>{getRoleBadge(staff.role)}</TableCell>
+                                            <TableCell>
+                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${!staff.isSuspended
+                                                        ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                                                        : 'bg-rose-50 text-rose-600 border border-rose-100'
+                                                    }`}>
+                                                    <span className={`w-1.5 h-1.5 rounded-full mr-2 ${!staff.isSuspended ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></span>
+                                                    {!staff.isSuspended ? 'พร้อมทำงาน (Active)' : 'ระงับสิทธิ์'}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell className="text-slate-500 font-medium">
+                                                {new Date(staff.createdAt).toLocaleDateString('th-TH', {
+                                                    day: '2-digit',
+                                                    month: 'short',
+                                                    year: '2-digit'
+                                                })}
+                                            </TableCell>
+                                            <TableCell className="text-right pr-6">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" className="h-10 w-10 p-0 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-full transition-all">
+                                                            <MoreHorizontal className="h-5 w-5" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-xl border-slate-200 p-2">
+                                                        <DropdownMenuLabel className="px-2 py-1.5 text-xs text-slate-400 font-bold uppercase tracking-widest">ข้อมูลบัญชี</DropdownMenuLabel>
+                                                        <DropdownMenuSeparator className="bg-slate-100" />
+                                                        <DropdownMenuItem className="cursor-pointer py-2.5 rounded-lg">
+                                                            <KeyRound className="mr-3 h-4 w-4 text-slate-400" /> รีเซ็ตรหัสผ่าน
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem className="cursor-pointer py-2.5 rounded-lg">
+                                                            <Mail className="mr-3 h-4 w-4 text-slate-400" /> ส่งข้อความด่วน
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator className="bg-slate-100" />
+                                                        <DropdownMenuItem
+                                                            className={`cursor-pointer py-2.5 rounded-lg font-bold ${!staff.isSuspended ? 'text-rose-600 focus:text-rose-700 focus:bg-rose-50' : 'text-emerald-600 focus:text-emerald-700 focus:bg-emerald-50'}`}
+                                                            onClick={() => handleUpdateUserStatus(staff._id, !staff.isSuspended)}
+                                                        >
+                                                            {!staff.isSuspended ? 'ระงับสิทธิ์การใช้งาน' : 'ยกเลิกการระงับสิทธิ์'}
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    )}
                 </div>
             </div>
         </div>

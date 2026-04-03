@@ -1,11 +1,38 @@
+import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Link } from 'react-router-dom';
-import { Sparkles } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Sparkles, Loader2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useGoogleLogin } from '@react-oauth/google';
 
 const Login = () => {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const { login, googleLogin, loading, error: authError } = useAuth();
+    const navigate = useNavigate();
+
+    const handleGoogleLogin = useGoogleLogin({
+        onSuccess: async (tokenResponse) => {
+            const res = await googleLogin(tokenResponse.access_token);
+            if (res.success) {
+                navigate('/');
+            }
+        },
+        onError: () => setError('Google Login Failed'),
+    });
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        const res = await login(email, password);
+        if (res.success) {
+            navigate('/');
+        }
+    };
+
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-slate-50 to-emerald-50 font-sans p-4 relative overflow-hidden">
 
@@ -31,25 +58,45 @@ const Login = () => {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="email">อีเมล</Label>
-                        <Input id="email" type="email" placeholder="m@example.com" className="bg-slate-50/50 border-slate-200 focus-visible:ring-emerald-500/30" />
-                    </div>
-                    <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                            <Label htmlFor="password">รหัสผ่าน</Label>
-                            <Link to="#" className="text-sm font-medium text-emerald-600 hover:text-emerald-500 transition-colors">
-                                ลืมรหัสผ่าน?
-                            </Link>
+                    {authError && (
+                        <Alert variant="destructive" className="bg-red-50 text-red-600 border-red-100">
+                            <AlertDescription>{authError}</AlertDescription>
+                        </Alert>
+                    )}
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="email">อีเมล</Label>
+                            <Input
+                                id="email"
+                                type="email"
+                                placeholder="m@example.com"
+                                className="bg-slate-50/50 border-slate-200 focus-visible:ring-emerald-500/30"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                            />
                         </div>
-                        <Input id="password" type="password" className="bg-slate-50/50 border-slate-200 focus-visible:ring-emerald-500/30" />
-                    </div>
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="password">รหัสผ่าน</Label>
+                                <Link to="#" className="text-sm font-medium text-emerald-600 hover:text-emerald-500 transition-colors">
+                                    ลืมรหัสผ่าน?
+                                </Link>
+                            </div>
+                            <Input
+                                id="password"
+                                type="password"
+                                className="bg-slate-50/50 border-slate-200 focus-visible:ring-emerald-500/30"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                            />
+                        </div>
 
-                    <Link to="/admin" className="w-full block">
-                        <Button className="w-full bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 font-bold shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.02]">
-                            เข้าสู่ระบบ
+                        <Button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-700 hover:to-teal-600 font-bold shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.02]">
+                            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'เข้าสู่ระบบ'}
                         </Button>
-                    </Link>
+                    </form>
 
                     <div className="relative my-2">
                         <div className="absolute inset-0 flex items-center">
@@ -63,7 +110,13 @@ const Login = () => {
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
-                        <Button variant="outline" className="w-full bg-white hover:bg-slate-50 border-slate-200 text-slate-700 font-medium transition-all hover:-translate-y-0.5 hover:shadow-sm">
+                        <Button
+                            variant="outline"
+                            type="button"
+                            className="w-full bg-white hover:bg-slate-50 border-slate-200 text-slate-700 font-medium transition-all hover:-translate-y-0.5 hover:shadow-sm"
+                            onClick={() => handleGoogleLogin()}
+                            disabled={loading}
+                        >
                             <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                                 <path
                                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -84,7 +137,7 @@ const Login = () => {
                             </svg>
                             Google
                         </Button>
-                        <Button variant="outline" className="w-full bg-white hover:bg-slate-50 border-slate-200 text-slate-700 font-medium transition-all hover:-translate-y-0.5 hover:shadow-sm">
+                        <Button variant="outline" type="button" className="w-full bg-white hover:bg-slate-50 border-slate-200 text-slate-700 font-medium transition-all hover:-translate-y-0.5 hover:shadow-sm">
                             <svg className="mr-2 h-4 w-4" viewBox="0 0 23 23">
                                 <path fill="#f3f3f3" d="M0 0h23v23H0z" />
                                 <path fill="#f35325" d="M1 1h10v10H1z" />

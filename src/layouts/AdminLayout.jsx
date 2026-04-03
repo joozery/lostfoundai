@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import {
     LayoutDashboard,
     Package,
@@ -28,8 +29,20 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const AdminLayout = ({ children }) => {
+    const { user, logout, loading } = useAuth();
     const location = useLocation();
+    const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
+
+    // Security Check: Redirect to admin login if not logged in or not admin/staff
+    if (!loading && (!user || (user.role !== 'admin' && user.role !== 'staff'))) {
+        navigate('/admin/login');
+        return null;
+    }
+
+    if (loading) {
+        return <div className="h-screen w-full flex items-center justify-center bg-[#0F172A] text-white">กำลังโหลด...</div>;
+    }
 
     const menuItems = [
         { icon: <LayoutDashboard size={20} />, label: 'ภาพรวมระบบ', path: '/admin' },
@@ -115,14 +128,22 @@ const AdminLayout = ({ children }) => {
             <div className="mt-auto border-t border-slate-800 bg-[#0B1120] p-4">
                 <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10 border-2 border-slate-700 shadow-sm">
-                        <AvatarImage src="https://github.com/shadcn.png" />
-                        <AvatarFallback>AD</AvatarFallback>
+                        <AvatarImage src={user?.avatar} />
+                        <AvatarFallback className="bg-emerald-500 text-white font-bold">{user?.firstname?.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 overflow-hidden">
-                        <p className="text-sm font-semibold text-white truncate">ผู้ดูแลระบบ</p>
-                        <p className="text-xs text-slate-500 truncate">admin@lostfound.com</p>
+                        <p className="text-sm font-semibold text-white truncate">{user?.firstname} {user?.lastname}</p>
+                        <p className="text-xs text-slate-500 truncate">{user?.email}</p>
                     </div>
-                    <Button variant="ghost" size="icon" className="text-slate-400 hover:text-red-400 hover:bg-red-500/10 h-8 w-8 rounded-full">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                            logout();
+                            navigate('/admin/login');
+                        }}
+                        className="text-slate-400 hover:text-red-400 hover:bg-red-500/10 h-8 w-8 rounded-full"
+                    >
                         <LogOut size={16} />
                     </Button>
                 </div>
@@ -174,8 +195,13 @@ const AdminLayout = ({ children }) => {
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" className="gap-2 pl-2 pr-2 text-slate-700 hover:bg-slate-100/80 rounded-full h-10">
+                                    <Avatar className="h-8 w-8 border border-slate-100">
+                                        <AvatarImage src={user?.avatar} />
+                                        <AvatarFallback className="bg-emerald-50 text-emerald-600 font-bold">{user?.firstname?.charAt(0)}</AvatarFallback>
+                                    </Avatar>
                                     <div className="text-right hidden sm:block mr-2">
-                                        <div className="text-sm font-bold leading-none">Admin User</div>
+                                        <div className="text-sm font-bold leading-none">{user?.firstname}</div>
+                                        <div className="text-[10px] text-slate-500 font-medium capitalize mt-0.5">{user?.role}</div>
                                     </div>
                                     <ChevronDown size={16} className="text-slate-400" />
                                 </Button>
@@ -186,7 +212,15 @@ const AdminLayout = ({ children }) => {
                                 <DropdownMenuItem className="cursor-pointer">แก้ไขข้อมูลส่วนตัว</DropdownMenuItem>
                                 <DropdownMenuItem className="cursor-pointer">ตั้งค่าบัญชี</DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-rose-600 focus:text-rose-700 focus:bg-rose-50 cursor-pointer">ออกจากระบบ</DropdownMenuItem>
+                                <DropdownMenuItem
+                                    className="text-rose-600 focus:text-rose-700 focus:bg-rose-50 cursor-pointer"
+                                    onClick={() => {
+                                        logout();
+                                        navigate('/admin/login');
+                                    }}
+                                >
+                                    ออกจากระบบ
+                                </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>

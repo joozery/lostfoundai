@@ -30,27 +30,41 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useState, useEffect } from "react";
+import api from "@/lib/axios";
 
 const AdminItems = () => {
-    const items = [
-        { id: 'L-001', title: 'กระเป๋าสตางค์ Chanel Classic', user: 'สมหญิง มีทรัพย์', avatar: null, date: '15/01/2024', status: 'Pending', type: 'Lost', location: 'สยามพารากอน' },
-        { id: 'F-002', title: 'iPhone 15 Pro Max', user: 'บุญมี ใจดี', avatar: 'https://github.com/shadcn.png', date: '14/01/2024', status: 'Matched', type: 'Found', location: 'เซ็นทรัลเวิลด์' },
-        { id: 'L-003', title: 'กุญแจรถยนต์ Honda Civic', user: 'Admin User', avatar: null, date: '16/01/2024', status: 'Active', type: 'Lost', location: 'MRT จตุจักร' },
-        { id: 'F-004', title: 'MacBook Air M2', user: 'Visitor', avatar: null, date: '12/01/2024', status: 'Returned', type: 'Found', location: 'Starbucks สยาม' },
-        { id: 'L-005', title: 'หูฟัง Sony WH-1000XM5', user: 'David K.', avatar: null, date: '11/01/2024', status: 'Active', type: 'Lost', location: 'เอ็มควอเทียร์' },
-    ];
+    const [items, setItems] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState('');
+
+    useEffect(() => {
+        const fetchItems = async () => {
+            try {
+                const res = await api.get('/items', {
+                    params: { search, status: 'all' }
+                });
+                setItems(res.data);
+            } catch (err) {
+                console.error('Failed to fetch items:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchItems();
+    }, [search]);
 
     const getStatusBadge = (status) => {
         switch (status) {
-            case 'Matched': return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-emerald-200 shadow-sm font-medium">จับคู่สำเร็จ</Badge>;
-            case 'Returned': return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200 shadow-sm font-medium">ส่งคืนแล้ว</Badge>;
-            case 'Pending': return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-200 border-amber-200 shadow-sm font-medium">รอตรวจสอบ</Badge>;
-            default: return <Badge variant="outline" className="text-slate-600 border-slate-300 font-medium">กำลังดำเนินการ</Badge>;
+            case 'resolved': return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-emerald-200 shadow-sm font-medium">สำเร็จแล้ว</Badge>;
+            case 'closed': return <Badge className="bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200 shadow-sm font-medium">ปิดรายการ</Badge>;
+            case 'open': return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-200 border-amber-200 shadow-sm font-medium">กำลังดำเนินการ</Badge>;
+            default: return <Badge variant="outline" className="text-slate-600 border-slate-300 font-medium">{status}</Badge>;
         }
     };
 
     const getTypeBadge = (type) => {
-        return type === 'Lost'
+        return type === 'lost'
             ? <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200 font-bold">แจ้งหาย</Badge>
             : <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 font-bold">เจอของ</Badge>;
     };
@@ -76,6 +90,8 @@ const AdminItems = () => {
                         <Input
                             placeholder="ค้นหารายการ, ผู้ใช้งาน, สถานที่..."
                             className="pl-10 bg-white border-slate-200 focus-visible:ring-emerald-500/20 shadow-sm"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
                     <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -107,13 +123,13 @@ const AdminItems = () => {
                         </TableHeader>
                         <TableBody>
                             {items.map((item) => (
-                                <TableRow key={item.id} className="hover:bg-slate-50 transition-all border-b border-slate-100 last:border-0 group cursor-pointer">
-                                    <TableCell className="font-mono text-xs font-semibold text-slate-500 group-hover:text-emerald-600 transition-colors">{item.id}</TableCell>
+                                <TableRow key={item._id} className="hover:bg-slate-50 transition-all border-b border-slate-100 last:border-0 group cursor-pointer">
+                                    <TableCell className="font-mono text-[10px] font-semibold text-slate-500 group-hover:text-emerald-600 transition-colors">{item._id.substring(0, 8)}...</TableCell>
                                     <TableCell>
                                         <div className="flex flex-col py-1">
                                             <span className="font-bold text-slate-800 text-sm">{item.title}</span>
                                             <span className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
-                                                <Calendar size={10} /> {item.date}
+                                                <Calendar size={10} /> {new Date(item.date).toLocaleDateString()}
                                             </span>
                                         </div>
                                     </TableCell>
@@ -123,10 +139,10 @@ const AdminItems = () => {
                                     <TableCell>
                                         <div className="flex items-center gap-2">
                                             <Avatar className="h-7 w-7 border border-slate-200">
-                                                <AvatarImage src={item.avatar} />
-                                                <AvatarFallback className="text-[10px] bg-indigo-50 text-indigo-600 font-bold">{item.user.charAt(0)}</AvatarFallback>
+                                                <AvatarImage src={item.user?.avatar} />
+                                                <AvatarFallback className="text-[10px] bg-indigo-50 text-indigo-600 font-bold">{item.user?.firstname?.charAt(0)}</AvatarFallback>
                                             </Avatar>
-                                            <span className="text-sm font-medium text-slate-700">{item.user}</span>
+                                            <span className="text-sm font-medium text-slate-700">{item.user?.firstname}</span>
                                         </div>
                                     </TableCell>
                                     <TableCell>

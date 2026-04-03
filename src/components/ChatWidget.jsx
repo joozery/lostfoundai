@@ -3,52 +3,85 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MessageCircle, X, Send, Minus, Paperclip, Smile } from "lucide-react";
+import { MessageCircle, X, Send, Minus, Paperclip, Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import api from "@/lib/axios";
+import { useAuth } from "@/context/AuthContext";
+import { Link } from 'react-router-dom';
 
 const ChatWidget = () => {
+    const { user, isAuthenticated } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
-    const [messages, setMessages] = useState([
-        { id: 1, type: 'admin', text: 'สวัสดีครับ! มีอะไรให้ทางเราช่วยเหลือไหมครับ?', time: 'ตอนนี้' }
-    ]);
+    const [messages, setMessages] = useState([]);
     const [inputValue, setInputValue] = useState("");
+    const [loading, setLoading] = useState(false);
     const messagesEndRef = useRef(null);
+    const [adminUser, setAdminUser] = useState(null);
 
-    const toggleChat = () => setIsOpen(!isOpen);
+    const toggleChat = () => {
+        setIsOpen(!isOpen);
+    };
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
 
+    // Fetch Admin or Support User to chat with (Simplified: find first admin)
+    const fetchAdmin = async () => {
+        try {
+            const res = await api.get('/admin/users');
+            const admin = res.data.find(u => u.role === 'admin');
+            setAdminUser(admin);
+        } catch (err) {
+            console.error("Failed to find admin", err);
+        }
+    };
+
+    const fetchMessages = async () => {
+        if (!adminUser || !isAuthenticated) return;
+        try {
+            const res = await api.get(`/chat/${adminUser._id}`);
+            setMessages(res.data);
+        } catch (err) {
+            console.error("Failed to fetch messages", err);
+        }
+    };
+
+    useEffect(() => {
+        if (isOpen && isAuthenticated) {
+            fetchAdmin();
+        }
+    }, [isOpen, isAuthenticated]);
+
+    useEffect(() => {
+        if (adminUser) {
+            fetchMessages();
+            const interval = setInterval(fetchMessages, 4000);
+            return () => clearInterval(interval);
+        }
+    }, [adminUser]);
+
     useEffect(() => {
         scrollToBottom();
     }, [messages, isOpen]);
 
-    const handleSendMessage = (e) => {
+    const handleSendMessage = async (e) => {
         e.preventDefault();
-        if (!inputValue.trim()) return;
+        if (!inputValue.trim() || !adminUser || loading) return;
 
-        // Add user message
-        const newUserMsg = {
-            id: Date.now(),
-            type: 'user',
-            text: inputValue,
-            time: 'ตอนนี้'
-        };
-
-        setMessages(prev => [...prev, newUserMsg]);
-        setInputValue("");
-
-        // Simulate admin reply
-        setTimeout(() => {
-            const adminReply = {
-                id: Date.now() + 1,
-                type: 'admin',
-                text: 'ขอบคุณที่ติดต่อเข้ามาครับ เจ้าหน้าที่จะรีบตอบกลับโดยเร็วที่สุดครับ (ระบบจำลอง)',
-                time: 'ตอนนี้'
-            };
-            setMessages(prev => [...prev, adminReply]);
-        }, 1500);
+        setLoading(true);
+        try {
+            await api.post('/chat', {
+                receiverId: adminUser._id,
+                content: inputValue
+            });
+            setInputValue("");
+            fetchMessages();
+        } catch (err) {
+            console.error("Send failed", err);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -56,94 +89,127 @@ const ChatWidget = () => {
 
             {/* Chat Window */}
             {isOpen && (
-                <Card className="w-[350px] h-[500px] flex flex-col shadow-2xl border-slate-200 overflow-hidden animate-in slide-in-from-bottom-10 fade-in duration-300">
+                <Card className="w-[350px] h-[550px] flex flex-col shadow-2xl border-slate-200 overflow-hidden animate-in slide-in-from-bottom-10 fade-in duration-300 rounded-3xl">
 
                     {/* Header */}
-                    <div className="p-4 bg-emerald-600 text-white flex justify-between items-center shadow-md">
-                        <div className="flex items-center gap-3">
+                    <div className="p-5 bg-emerald-600 text-white flex justify-between items-center shadow-lg relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+                        <div className="flex items-center gap-4 relative z-10">
                             <div className="relative">
-                                <Avatar className="h-10 w-10 border-2 border-white/20">
-                                    <AvatarImage src="/placeholder-admin.jpg" />
-                                    <AvatarFallback className="bg-white/10 text-white font-bold">AD</AvatarFallback>
+                                <Avatar className="h-11 w-11 border-2 border-white/30 shadow-sm">
+                                    <AvatarImage src={adminUser?.avatar} />
+                                    <AvatarFallback className="bg-white/20 text-white font-bold uppercase">{adminUser?.firstname?.charAt(0) || 'AD'}</AvatarFallback>
                                 </Avatar>
-                                <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-400 ring-2 ring-emerald-600"></span>
+                                <span className="absolute bottom-0.5 right-0.5 h-3 w-3 rounded-full bg-emerald-400 ring-2 ring-emerald-600"></span>
                             </div>
-                            <div>
-                                <h3 className="font-bold text-sm">Lost&Found Support</h3>
-                                <p className="text-[10px] text-emerald-100/80">ตอบกลับภายในไม่กี่นาที</p>
+                            <div className="flex flex-col">
+                                <h3 className="font-black text-[15px] tracking-tight">Support Helper</h3>
+                                <p className="text-[10px] text-emerald-100/80 font-bold uppercase tracking-widest">{adminUser ? 'เจ้าหน้าที่ออนไลน์' : 'กำลังหาเจ้าหน้าที่...'}</p>
                             </div>
                         </div>
-                        <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="h-7 w-7 text-white/70 hover:text-white hover:bg-white/10 rounded-full">
-                                <Minus size={18} />
-                            </Button>
-                        </div>
+                        <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="h-8 w-8 text-white/70 hover:text-white hover:bg-white/10 rounded-full relative z-10">
+                            <Minus size={20} />
+                        </Button>
                     </div>
 
                     {/* Chat Area */}
-                    <ScrollArea className="flex-1 bg-slate-50 p-4">
-                        <div className="space-y-4">
-                            <div className="text-center text-[10px] text-slate-400 my-2">วันนี้</div>
-
-                            {messages.map((msg) => (
-                                <div key={msg.id} className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`flex flex-col max-w-[80%] ${msg.type === 'user' ? 'items-end' : 'items-start'}`}>
-                                        <div className={`px-4 py-2.5 rounded-2xl text-sm shadow-sm ${msg.type === 'user'
-                                                ? 'bg-emerald-600 text-white rounded-tr-none'
-                                                : 'bg-white text-slate-700 border border-slate-200 rounded-tl-none'
-                                            }`}>
-                                            {msg.text}
-                                        </div>
-                                        <span className="text-[10px] text-slate-400 mt-1 px-1">{msg.time}</span>
-                                    </div>
+                    <ScrollArea className="flex-1 bg-slate-50/50 p-5">
+                        {!isAuthenticated ? (
+                            <div className="h-full flex flex-col items-center justify-center text-center p-6 gap-4">
+                                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
+                                    <MessageCircle size={32} />
                                 </div>
-                            ))}
-                            <div ref={messagesEndRef} />
-                        </div>
+                                <div>
+                                    <p className="font-bold text-slate-800 text-sm mb-1">กรุณาเข้าสู่ระบบ</p>
+                                    <p className="text-xs text-slate-400 font-medium">เพื่อเริ่มต้นการพูดคุยกับเจ้าหน้าที่</p>
+                                </div>
+                                <Link to="/login" className="w-full">
+                                    <Button onClick={() => setIsOpen(false)} className="w-full bg-emerald-600 font-bold rounded-xl h-10">เข้าสู่ระบบเลย</Button>
+                                </Link>
+                            </div>
+                        ) : (
+                            <div className="space-y-6">
+                                {messages.length === 0 && (
+                                    <div className="text-center py-10 opacity-50">
+                                        <Bot size={40} className="mx-auto text-emerald-600 mb-2" />
+                                        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">ยินดีต้อนรับครับ ทักทายเราได้เลย!</p>
+                                    </div>
+                                )}
+                                {messages.map((msg) => (
+                                    <div key={msg._id} className={`flex ${msg.sender._id === user?._id ? 'justify-end' : 'justify-start'}`}>
+                                        <div className={`flex flex-col max-w-[85%] ${msg.sender._id === user?._id ? 'items-end' : 'items-start'}`}>
+                                            <div className={`px-4 py-2.5 rounded-2xl text-[13px] shadow-sm leading-relaxed font-medium ${msg.sender._id === user?._id
+                                                ? 'bg-emerald-600 text-white rounded-tr-none'
+                                                : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'
+                                                }`}>
+                                                {msg.content}
+                                            </div>
+                                            <span className="text-[9px] text-slate-400 mt-1 px-1 font-bold uppercase">
+                                                {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                                <div ref={messagesEndRef} />
+                            </div>
+                        )}
                     </ScrollArea>
 
                     {/* Input Area */}
-                    <div className="p-3 bg-white border-t border-slate-100">
-                        <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-                            <Button type="button" variant="ghost" size="icon" className="text-slate-400 shrink-0 h-9 w-9">
-                                <Paperclip size={18} />
-                            </Button>
-                            <Input
-                                value={inputValue}
-                                onChange={(e) => setInputValue(e.target.value)}
-                                placeholder="พิมพ์ข้อความ..."
-                                className="flex-1 border-0 bg-slate-100 focus-visible:ring-0 focus-visible:bg-slate-50 transition-colors h-10 px-4 rounded-full"
-                            />
-                            <Button
-                                type="submit"
-                                size="icon"
-                                disabled={!inputValue.trim()}
-                                className="h-10 w-10 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-md disabled:opacity-50 shrink-0"
-                            >
-                                <Send size={18} className="ml-0.5" />
-                            </Button>
-                        </form>
-                    </div>
+                    {isAuthenticated && (
+                        <div className="p-4 bg-white border-t border-slate-100 shrink-0">
+                            <form onSubmit={handleSendMessage} className="flex items-center gap-3">
+                                <div className="relative flex-1">
+                                    <Input
+                                        value={inputValue}
+                                        onChange={(e) => setInputValue(e.target.value)}
+                                        placeholder="พิมพ์ข้อความที่นี่..."
+                                        disabled={loading}
+                                        className="h-12 border-0 bg-slate-100 focus-visible:ring-1 focus-visible:ring-emerald-500/10 focus-visible:bg-white transition-all px-4 rounded-2xl font-medium text-sm pr-12"
+                                    />
+                                    <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1 text-slate-400 h-10 w-10 hover:bg-transparent">
+                                        <Smile size={18} />
+                                    </Button>
+                                </div>
+                                <Button
+                                    type="submit"
+                                    size="icon"
+                                    disabled={!inputValue.trim() || loading}
+                                    className="h-12 w-12 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-200 transition-all active:scale-90 shrink-0"
+                                >
+                                    {loading ? <Loader2 size={18} className="animate-spin" /> : <Send size={20} className="ml-1" />}
+                                </Button>
+                            </form>
+                        </div>
+                    )}
                 </Card>
             )}
 
             {/* Floating Button */}
             <Button
                 onClick={toggleChat}
-                className={`h-14 w-14 rounded-full shadow-xl transition-all duration-300 ${isOpen
-                        ? 'bg-slate-200 text-slate-600 hover:bg-slate-300 rotate-90'
-                        : 'bg-emerald-600 text-white hover:bg-emerald-700 hover:scale-105'
+                className={`h-16 w-16 rounded-full shadow-2xl transition-all duration-500 active:scale-95 ${isOpen
+                    ? 'bg-slate-800 text-white rotate-90 transform'
+                    : 'bg-emerald-600 text-white hover:bg-emerald-700 hover:scale-110 shadow-emerald-200'
                     }`}
             >
-                {isOpen ? <X size={24} /> : (
-                    <div className="relative">
-                        <MessageCircle size={28} />
-                        <span className="absolute -top-1 -right-1 h-3 w-3 bg-rose-500 rounded-full border-2 border-emerald-600"></span>
+                {isOpen ? <X size={28} /> : (
+                    <div className="relative flex items-center justify-center translate-y-0.5">
+                        <MessageCircle size={32} />
+                        <span className="absolute -top-1.5 -right-1.5 h-4 w-4 bg-rose-500 rounded-full border-2 border-emerald-600 animate-bounce"></span>
                     </div>
                 )}
             </Button>
         </div>
     );
 };
+
+const Smile = ({ size, className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10" /><path d="M8 14s1.5 2 4 2 4-2 4-2" /><line x1="9" y1="9" x2="9.01" y2="9" /><line x1="15" y1="9" x2="15.01" y2="9" /></svg>
+);
+
+const Bot = ({ size, className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="18" height="10" x="3" y="11" rx="2" /><circle cx="12" cy="5" r="2" /><path d="M12 7v4" /><line x1="8" y1="16" x2="8" y2="16" /><line x1="16" y1="16" x2="16" y2="16" /></svg>
+);
 
 export default ChatWidget;

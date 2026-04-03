@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import {
     Carousel,
     CarouselContent,
@@ -7,19 +8,40 @@ import {
 } from "@/components/ui/carousel";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Calendar, Tag } from "lucide-react";
+import { MapPin, Calendar, Tag, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
+import api from '../lib/axios';
 
 const RecentItems = () => {
-    // Mock Data
-    const items = [
-        { id: 1, type: 'lost', title: 'แมวสีส้ม หาย', location: 'ลาดพร้าว 50', date: 'วันนี้', img: 'https://images.unsplash.com/photo-1543852786-1cf6624b9987?q=80&w=600&auto=format&fit=crop', category: 'สัตว์เลี้ยง' },
-        { id: 2, type: 'found', title: 'เจอกุญแจรถ Benz', location: 'เซ็นทรัลลาดพร้าว', date: '5 นาทีที่แล้ว', img: 'https://images.unsplash.com/photo-1622630732303-8e94514a1746?q=80&w=600&auto=format&fit=crop', category: 'กุญแจ' },
-        { id: 3, type: 'lost', title: 'iPhone 15 สีฟ้า', location: 'BTS สยาม', date: '1 ชม. ที่แล้ว', img: 'https://images.unsplash.com/photo-1695048133142-1a20484d2569?q=80&w=600&auto=format&fit=crop', category: 'อิเล็กทรอนิกส์' },
-        { id: 4, type: 'found', title: 'กระเป๋าตังค์สีดำ', location: 'MRT สุขุมวิท', date: 'เมื่อวาน', img: 'https://images.unsplash.com/photo-1627123424574-724758594e93?q=80&w=600&auto=format&fit=crop', category: 'กระเป๋า' },
-        { id: 5, type: 'lost', title: 'กล้อง Sony A7IV', location: 'สวนรถไฟ', date: '2 วันที่แล้ว', img: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=600&auto=format&fit=crop', category: 'อิเล็กทรอนิกส์' },
-        { id: 6, type: 'found', title: 'บัตรประชาชน', location: 'สนามบินดอนเมือง', date: 'วันนี้', img: 'https://images.unsplash.com/photo-1589829085413-56de8ae18c73?q=80&w=600&auto=format&fit=crop', category: 'เอกสาร' },
-    ];
+    const [items, setItems] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchItems = async () => {
+            try {
+                const res = await api.get('/items');
+                setItems(res.data);
+            } catch (err) {
+                console.error("Failed to fetch items", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchItems();
+    }, []);
+
+    if (loading) {
+        return (
+            <div className="py-20 flex justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+            </div>
+        );
+    }
+
+    if (items.length === 0) {
+        return null;
+    }
 
     return (
         <section className="py-20 bg-white">
@@ -40,8 +62,8 @@ const RecentItems = () => {
                 >
                     <CarouselContent className="-ml-4 pb-4">
                         {items.map((item) => (
-                            <CarouselItem key={item.id} className="pl-4 md:basis-1/2 lg:basis-1/4">
-                                <Link to={`/item/${item.id}`}>
+                            <CarouselItem key={item._id} className="pl-4 md:basis-1/2 lg:basis-1/4">
+                                <Link to={`/item/${item._id}`}>
                                     <Card className="overflow-hidden border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 h-full group">
                                         <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
                                             {/* Badge */}
@@ -55,7 +77,7 @@ const RecentItems = () => {
 
                                             {/* Image */}
                                             <img
-                                                src={item.img}
+                                                src={item.images?.[0] || 'https://via.placeholder.com/400x300?text=No+Image'}
                                                 alt={item.title}
                                                 className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110"
                                             />
@@ -77,7 +99,7 @@ const RecentItems = () => {
                                             </div>
                                             <div className="flex items-center gap-1 text-slate-400 text-xs">
                                                 <Calendar size={12} className="shrink-0" />
-                                                <span>{item.date}</span>
+                                                <span>{new Date(item.date).toLocaleDateString('th-TH')}</span>
                                             </div>
                                         </CardContent>
                                     </Card>

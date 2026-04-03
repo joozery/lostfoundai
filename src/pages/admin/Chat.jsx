@@ -1,28 +1,71 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, Send, MoreVertical, Phone, Video } from "lucide-react";
+import api from "@/lib/axios";
+import { useAuth } from "@/context/AuthContext";
 
 const AdminChat = () => {
-    const [selectedChat, setSelectedChat] = useState(1);
+    const { user: currentUser } = useAuth();
+    const [selectedUser, setSelectedUser] = useState(null);
     const [messageInput, setMessageInput] = useState("");
+    const [conversations, setConversations] = useState([]);
+    const [messages, setMessages] = useState([]);
 
-    const conversations = [
-        { id: 1, name: 'สมชาย ใจดี', lastMessage: 'ขอบคุณมากครับ เดี๋ยวผมเข้าไปรับ', time: '10:30', unread: 2, status: 'online', avatar: null },
-        { id: 2, name: 'วิภาดา รักดี', lastMessage: 'รบกวนตรวจสอบรายการนี้หน่อยค่ะ', time: 'เมื่อวาน', unread: 0, status: 'offline', avatar: 'https://github.com/shadcn.png' },
-        { id: 3, name: 'Guest User 093', lastMessage: 'สอบถามเรื่องการรับของคืนครับ', time: 'เมื่อวาน', unread: 0, status: 'online', avatar: null },
-    ];
+    // Fetch conversations
+    useEffect(() => {
+        const fetchConversations = async () => {
+            try {
+                const res = await api.get('/chat/conversations');
+                setConversations(res.data);
+                if (res.data.length > 0 && !selectedUser) {
+                    setSelectedUser(res.data[0].user);
+                }
+            } catch (err) {
+                console.error('Failed to fetch conversations:', err);
+            }
+        };
+        fetchConversations();
+    }, []);
 
-    const messages = [
-        { id: 1, sender: 'user', text: 'สวัสดีครับ ผมทำกระเป๋าสตางค์หายที่เซ็นทรัลครับ', time: '10:00' },
-        { id: 2, sender: 'admin', text: 'สวัสดีครับ รบกวนขอทราบรายละเอียดเพิ่มเติมหน่อยครับ', time: '10:05' },
-        { id: 3, sender: 'user', text: 'เป็นกระเป๋าหนังสีดำ ยี่ห้อ Coach ครับ ด้านในมีบัตรประชาชนชื่อ สมชาย ใจดี', time: '10:10' },
-        { id: 4, sender: 'admin', text: 'ตรวจสอบสักครู่นะครับ... พบรายการที่ตรงกันครับ! มีคนแจ้งพบเมื่อเช้านี้', time: '10:15' },
-        { id: 5, sender: 'user', text: 'ขอบคุณมากครับ เดี๋ยวผมเข้าไปรับ', time: '10:30' },
-    ];
+    // Fetch messages for selected user
+    useEffect(() => {
+        if (selectedUser) {
+            const fetchMessages = async () => {
+                try {
+                    const res = await api.get(`/chat/${selectedUser._id}`);
+                    setMessages(res.data);
+                } catch (err) {
+                    console.error('Failed to fetch messages:', err);
+                }
+            };
+            fetchMessages();
+            // Optional: poll for new messages
+            const interval = setInterval(fetchMessages, 3000);
+            return () => clearInterval(interval);
+        }
+    }, [selectedUser]);
+
+    const handleSendMessage = async (e) => {
+        e.preventDefault();
+        if (!messageInput.trim() || !selectedUser) return;
+
+        try {
+            await api.post('/chat', {
+                receiverId: selectedUser._id,
+                content: messageInput
+            });
+            setMessageInput("");
+            // Refresh messages
+            const res = await api.get(`/chat/${selectedUser._id}`);
+            setMessages(res.data);
+        } catch (err) {
+            console.error('Failed to send message:', err);
+        }
+    };
 
     return (
         <div className="h-[calc(100vh-120px)] max-w-7xl mx-auto font-sans flex gap-6">
@@ -40,36 +83,28 @@ const AdminChat = () => {
                     <div className="flex flex-col p-2 gap-1">
                         {conversations.map((chat) => (
                             <button
-                                key={chat.id}
-                                onClick={() => setSelectedChat(chat.id)}
-                                className={`flex items-center gap-3 p-3 rounded-xl transition-all ${selectedChat === chat.id
-                                        ? 'bg-emerald-50 text-emerald-900 shadow-sm ring-1 ring-emerald-100'
-                                        : 'hover:bg-slate-50 text-slate-700'
+                                key={chat.user._id}
+                                onClick={() => setSelectedUser(chat.user)}
+                                className={`flex items-center gap-3 p-3 rounded-xl transition-all ${selectedUser?._id === chat.user._id
+                                    ? 'bg-emerald-50 text-emerald-900 shadow-sm ring-1 ring-emerald-100'
+                                    : 'hover:bg-slate-50 text-slate-700'
                                     }`}
                             >
                                 <div className="relative">
                                     <Avatar className="h-10 w-10 border border-slate-200">
-                                        <AvatarImage src={chat.avatar} />
-                                        <AvatarFallback className="bg-slate-100 text-slate-500 font-bold">{chat.name.charAt(0)}</AvatarFallback>
+                                        <AvatarImage src={chat.user.avatar} />
+                                        <AvatarFallback className="bg-slate-100 text-slate-500 font-bold">{chat.user.firstname.charAt(0)}</AvatarFallback>
                                     </Avatar>
-                                    {chat.status === 'online' && (
-                                        <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-white"></span>
-                                    )}
                                 </div>
                                 <div className="flex-1 text-left overflow-hidden">
                                     <div className="flex justify-between items-baseline">
-                                        <span className="font-bold text-sm truncate">{chat.name}</span>
-                                        <span className="text-[10px] text-slate-400 shrink-0">{chat.time}</span>
+                                        <span className="font-bold text-sm truncate">{chat.user.firstname} {chat.user.lastname}</span>
+                                        <span className="text-[10px] text-slate-400 shrink-0">{new Date(chat.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                     </div>
-                                    <p className={`text-xs truncate ${selectedChat === chat.id ? 'text-emerald-600/80' : 'text-slate-500'}`}>
+                                    <p className={`text-xs truncate ${selectedUser?._id === chat.user._id ? 'text-emerald-600/80' : 'text-slate-500'}`}>
                                         {chat.lastMessage}
                                     </p>
                                 </div>
-                                {chat.unread > 0 && (
-                                    <span className="h-5 w-5 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center shadow-sm">
-                                        {chat.unread}
-                                    </span>
-                                )}
                             </button>
                         ))}
                     </div>
@@ -82,13 +117,14 @@ const AdminChat = () => {
                 <div className="h-16 border-b border-slate-100 flex items-center justify-between px-6 bg-white shrink-0">
                     <div className="flex items-center gap-3">
                         <Avatar className="h-9 w-9 border border-slate-200">
-                            <AvatarFallback className="bg-emerald-100 text-emerald-700 font-bold">ส</AvatarFallback>
+                            <AvatarImage src={selectedUser?.avatar} />
+                            <AvatarFallback className="bg-emerald-100 text-emerald-700 font-bold">{selectedUser?.firstname?.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div>
-                            <h3 className="font-bold text-slate-800 text-sm">สมชาย ใจดี</h3>
+                            <h3 className="font-bold text-slate-800 text-sm">{selectedUser?.firstname} {selectedUser?.lastname}</h3>
                             <div className="flex items-center gap-1.5">
                                 <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
-                                <span className="text-xs text-slate-500">Online</span>
+                                <span className="text-xs text-slate-500">Active</span>
                             </div>
                         </div>
                     </div>
@@ -106,15 +142,17 @@ const AdminChat = () => {
                             <span className="text-xs font-medium text-slate-400 bg-slate-100 px-3 py-1 rounded-full">วันนี้</span>
                         </div>
                         {messages.map((msg) => (
-                            <div key={msg.id} className={`flex ${msg.sender === 'admin' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`flex flex-col max-w-[70%] ${msg.sender === 'admin' ? 'items-end' : 'items-start'}`}>
-                                    <div className={`px-5 py-3 rounded-2xl text-sm shadow-sm ${msg.sender === 'admin'
-                                            ? 'bg-emerald-600 text-white rounded-tr-none'
-                                            : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'
+                            <div key={msg._id} className={`flex ${msg.sender._id === currentUser?._id ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`flex flex-col max-w-[70%] ${msg.sender._id === currentUser?._id ? 'items-end' : 'items-start'}`}>
+                                    <div className={`px-5 py-3 rounded-2xl text-sm shadow-sm ${msg.sender._id === currentUser?._id
+                                        ? 'bg-emerald-600 text-white rounded-tr-none'
+                                        : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'
                                         }`}>
-                                        {msg.text}
+                                        {msg.content}
                                     </div>
-                                    <span className="text-[10px] text-slate-400 mt-1 px-1">{msg.time}</span>
+                                    <span className="text-[10px] text-slate-400 mt-1 px-1">
+                                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
                                 </div>
                             </div>
                         ))}
@@ -123,7 +161,7 @@ const AdminChat = () => {
 
                 {/* Input Area */}
                 <div className="p-4 bg-white border-t border-slate-100 shrink-0">
-                    <form className="flex gap-2" onSubmit={(e) => e.preventDefault()}>
+                    <form className="flex gap-2" onSubmit={handleSendMessage}>
                         <Input
                             value={messageInput}
                             onChange={(e) => setMessageInput(e.target.value)}

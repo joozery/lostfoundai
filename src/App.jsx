@@ -7,6 +7,7 @@ import SearchItems from './pages/SearchItems';
 import ItemDetail from './pages/ItemDetail';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Profile from './pages/Profile';
 import AdminLayout from './layouts/AdminLayout';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminItems from './pages/admin/Items';
@@ -15,7 +16,11 @@ import AdminLostItems from './pages/admin/LostItems';
 import AdminFoundItems from './pages/admin/FoundItems';
 import AdminChat from './pages/admin/Chat';
 import AdminStaff from './pages/admin/Staff';
+import AdminLogin from './pages/admin/Login';
+import AdminSettings from './pages/admin/Settings';
 import ChatWidget from './components/ChatWidget';
+import AIChatSearch from './pages/AIChatSearch';
+import Chat from './pages/Chat';
 import './App.css';
 
 // Layout wrapper to conditionally hide Navbar/Footer
@@ -40,29 +45,38 @@ const AppLayout = ({ children }) => {
     );
 };
 
+import { AuthProvider } from './context/AuthContext';
+
 function App() {
     return (
         <Router>
-            <AppLayout>
-                <Routes>
-                    {/* Public Routes */}
-                    <Route path="/" element={<Home />} />
-                    <Route path="/search" element={<SearchItems />} />
-                    <Route path="/item/:id" element={<ItemDetail />} />
-                    <Route path="/report/:type" element={<ReportItem />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<Register />} />
+            <AuthProvider>
+                <AppLayout>
+                    <Routes>
+                        {/* Public Routes */}
+                        <Route path="/" element={<Home />} />
+                        <Route path="/search" element={<SearchItems />} />
+                        <Route path="/item/:id" element={<ItemDetail />} />
+                        <Route path="/report/:type" element={<ReportItem />} />
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/register" element={<Register />} />
+                        <Route path="/profile" element={<Profile />} />
+                        <Route path="/chat/:userId" element={<Chat />} />
+                        <Route path="/ai-search" element={<AIChatSearch />} />
 
-                    {/* Admin Routes */}
-                    <Route path="/admin" element={<AdminLayout><AdminDashboard /></AdminLayout>} />
-                    <Route path="/admin/items" element={<AdminLayout><AdminItems /></AdminLayout>} />
-                    <Route path="/admin/lost" element={<AdminLayout><AdminLostItems /></AdminLayout>} />
-                    <Route path="/admin/found" element={<AdminLayout><AdminFoundItems /></AdminLayout>} />
-                    <Route path="/admin/chat" element={<AdminLayout><AdminChat /></AdminLayout>} />
-                    <Route path="/admin/users" element={<AdminLayout><AdminUsers /></AdminLayout>} />
-                    <Route path="/admin/staff" element={<AdminLayout><AdminStaff /></AdminLayout>} />
-                </Routes>
-            </AppLayout>
+                        {/* Admin Routes */}
+                        <Route path="/admin/login" element={<AdminLogin />} />
+                        <Route path="/admin" element={<AdminLayout><AdminDashboard /></AdminLayout>} />
+                        <Route path="/admin/items" element={<AdminLayout><AdminItems /></AdminLayout>} />
+                        <Route path="/admin/lost" element={<AdminLayout><AdminLostItems /></AdminLayout>} />
+                        <Route path="/admin/found" element={<AdminLayout><AdminFoundItems /></AdminLayout>} />
+                        <Route path="/admin/chat" element={<AdminLayout><AdminChat /></AdminLayout>} />
+                        <Route path="/admin/users" element={<AdminLayout><AdminUsers /></AdminLayout>} />
+                        <Route path="/admin/staff" element={<AdminLayout><AdminStaff /></AdminLayout>} />
+                        <Route path="/admin/settings" element={<AdminLayout><AdminSettings /></AdminLayout>} />
+                    </Routes>
+                </AppLayout>
+            </AuthProvider>
         </Router>
     );
 }

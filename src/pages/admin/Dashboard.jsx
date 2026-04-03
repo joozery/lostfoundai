@@ -1,6 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Package, CheckCircle2, AlertCircle, TrendingUp, Users, ArrowUpRight, ArrowDownRight, Clock } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useState, useEffect } from 'react';
+import api from '@/lib/axios';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 
 const data = [
     { name: 'จันทร์', lost: 40, found: 24, returned: 24 },
@@ -13,11 +15,30 @@ const data = [
 ];
 
 const AdminDashboard = () => {
+    const [statsData, setStatsData] = useState(null);
+    const [chartData, setChartData] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const res = await api.get('/admin/stats');
+                setStatsData(res.data.stats);
+                setChartData(res.data.chartData);
+            } catch (err) {
+                console.error('Failed to fetch stats:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchStats();
+    }, []);
+
     const stats = [
-        { title: 'รายการแจ้งทั้งหมด', value: '1,248', icon: <Package className="h-4 w-4 text-blue-600" />, change: '+12.5%', trend: 'up', color: 'bg-gradient-to-br from-blue-50 to-blue-50/10 border-blue-100 shadow-blue-100/50' },
-        { title: 'ส่งคืนสำเร็จ', value: '856', icon: <CheckCircle2 className="h-4 w-4 text-emerald-600" />, change: '+24.2%', trend: 'up', color: 'bg-gradient-to-br from-emerald-50 to-emerald-50/10 border-emerald-100 shadow-emerald-100/50' },
-        { title: 'กำลังติดตามหา', value: '342', icon: <AlertCircle className="h-4 w-4 text-amber-600" />, change: '-5.4%', trend: 'down', color: 'bg-gradient-to-br from-amber-50 to-amber-50/10 border-amber-100 shadow-amber-100/50' },
-        { title: 'ผู้ใช้งานใหม่', value: '156', icon: <Users className="h-4 w-4 text-indigo-600" />, change: '+18.2%', trend: 'up', color: 'bg-gradient-to-br from-indigo-50 to-indigo-50/10 border-indigo-100 shadow-indigo-100/50' },
+        { title: 'รายการแจ้งทั้งหมด', value: statsData?.totalItems || '0', icon: <Package className="h-4 w-4 text-blue-600" />, change: '+0%', trend: 'up', color: 'bg-gradient-to-br from-blue-50 to-blue-50/10 border-blue-100 shadow-blue-100/50' },
+        { title: 'ส่งคืนสำเร็จ', value: statsData?.resolvedItems || '0', icon: <CheckCircle2 className="h-4 w-4 text-emerald-600" />, change: '+0%', trend: 'up', color: 'bg-gradient-to-br from-emerald-50 to-emerald-50/10 border-emerald-100 shadow-emerald-100/50' },
+        { title: 'กำลังติดตามหา', value: statsData?.lostItems || '0', icon: <AlertCircle className="h-4 w-4 text-amber-600" />, change: '-0%', trend: 'down', color: 'bg-gradient-to-br from-amber-50 to-amber-50/10 border-amber-100 shadow-amber-100/50' },
+        { title: 'ผู้ใช้งานทั้งหมด', value: statsData?.totalUsers || '0', icon: <Users className="h-4 w-4 text-indigo-600" />, change: '+0%', trend: 'up', color: 'bg-gradient-to-br from-indigo-50 to-indigo-50/10 border-indigo-100 shadow-indigo-100/50' },
     ];
 
     return (
@@ -67,7 +88,7 @@ const AdminDashboard = () => {
                     <CardContent className="p-6">
                         <div style={{ width: '100%', height: 350 }}>
                             <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                                <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                     <defs>
                                         <linearGradient id="colorFound" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />

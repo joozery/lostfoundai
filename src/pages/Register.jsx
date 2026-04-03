@@ -1,11 +1,51 @@
+import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Link } from 'react-router-dom';
-import { UserPlus } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { UserPlus, Loader2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Register = () => {
+    const [formData, setFormData] = useState({
+        firstname: '',
+        lastname: '',
+        email: '',
+        password: '',
+        confirmPassword: ''
+    });
+
+    const { register, loading, error: authError } = useAuth();
+    const navigate = useNavigate();
+    const [localError, setLocalError] = useState('');
+
+    const handleChange = (e) => {
+        setFormData({ ...formData, [e.target.id]: e.target.value });
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLocalError('');
+
+        if (formData.password !== formData.confirmPassword) {
+            setLocalError('รหัสผ่านไม่ตรงกัน');
+            return;
+        }
+
+        const res = await register({
+            firstname: formData.firstname,
+            lastname: formData.lastname,
+            email: formData.email,
+            password: formData.password
+        });
+
+        if (res.success) {
+            navigate('/');
+        }
+    };
+
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-slate-50 to-emerald-50 font-sans p-4 relative overflow-hidden">
 
@@ -31,32 +71,75 @@ const Register = () => {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="firstname">ชื่อจริง</Label>
-                            <Input id="firstname" placeholder="" className="bg-slate-50/50 border-slate-200 focus-visible:ring-indigo-500/30" />
+                    {(authError || localError) && (
+                        <Alert variant="destructive" className="bg-red-50 text-red-600 border-red-100">
+                            <AlertDescription>{localError || authError}</AlertDescription>
+                        </Alert>
+                    )}
+                    <form onSubmit={handleSubmit}>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="firstname">ชื่อจริง</Label>
+                                <Input
+                                    id="firstname"
+                                    placeholder=""
+                                    className="bg-slate-50/50 border-slate-200 focus-visible:ring-indigo-500/30"
+                                    value={formData.firstname}
+                                    onChange={handleChange}
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="lastname">นามสกุล</Label>
+                                <Input
+                                    id="lastname"
+                                    placeholder=""
+                                    className="bg-slate-50/50 border-slate-200 focus-visible:ring-indigo-500/30"
+                                    value={formData.lastname}
+                                    onChange={handleChange}
+                                    required
+                                />
+                            </div>
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="lastname">นามสกุล</Label>
-                            <Input id="lastname" placeholder="" className="bg-slate-50/50 border-slate-200 focus-visible:ring-indigo-500/30" />
+                        <div className="space-y-2 mt-4">
+                            <Label htmlFor="email">อีเมล</Label>
+                            <Input
+                                id="email"
+                                type="email"
+                                placeholder="m@example.com"
+                                className="bg-slate-50/50 border-slate-200 focus-visible:ring-indigo-500/30"
+                                value={formData.email}
+                                onChange={handleChange}
+                                required
+                            />
                         </div>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="email">อีเมล</Label>
-                        <Input id="email" type="email" placeholder="m@example.com" className="bg-slate-50/50 border-slate-200 focus-visible:ring-indigo-500/30" />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="password">กำหนดรหัสผ่าน</Label>
-                        <Input id="password" type="password" className="bg-slate-50/50 border-slate-200 focus-visible:ring-indigo-500/30" />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="confirm-password">ยืนยันรหัสผ่าน</Label>
-                        <Input id="confirm-password" type="password" className="bg-slate-50/50 border-slate-200 focus-visible:ring-indigo-500/30" />
-                    </div>
+                        <div className="space-y-2 mt-4">
+                            <Label htmlFor="password">กำหนดรหัสผ่าน</Label>
+                            <Input
+                                id="password"
+                                type="password"
+                                className="bg-slate-50/50 border-slate-200 focus-visible:ring-indigo-500/30"
+                                value={formData.password}
+                                onChange={handleChange}
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2 mt-4">
+                            <Label htmlFor="confirmPassword">ยืนยันรหัสผ่าน</Label>
+                            <Input
+                                id="confirmPassword"
+                                type="password"
+                                className="bg-slate-50/50 border-slate-200 focus-visible:ring-indigo-500/30"
+                                value={formData.confirmPassword}
+                                onChange={handleChange}
+                                required
+                            />
+                        </div>
 
-                    <Button className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 font-bold shadow-lg shadow-indigo-500/20 mt-2 transition-all hover:scale-[1.02]">
-                        ลงทะเบียน
-                    </Button>
+                        <Button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 font-bold shadow-lg shadow-indigo-500/20 mt-6 transition-all hover:scale-[1.02]">
+                            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'ลงทะเบียน'}
+                        </Button>
+                    </form>
 
                     <div className="relative my-2">
                         <div className="absolute inset-0 flex items-center">
@@ -70,7 +153,7 @@ const Register = () => {
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
-                        <Button variant="outline" className="w-full bg-white hover:bg-slate-50 border-slate-200 text-slate-700 font-medium transition-all hover:-translate-y-0.5 hover:shadow-sm">
+                        <Button variant="outline" type="button" className="w-full bg-white hover:bg-slate-50 border-slate-200 text-slate-700 font-medium transition-all hover:-translate-y-0.5 hover:shadow-sm">
                             <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                                 <path
                                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -91,7 +174,7 @@ const Register = () => {
                             </svg>
                             Google
                         </Button>
-                        <Button variant="outline" className="w-full bg-white hover:bg-slate-50 border-slate-200 text-slate-700 font-medium transition-all hover:-translate-y-0.5 hover:shadow-sm">
+                        <Button variant="outline" type="button" className="w-full bg-white hover:bg-slate-50 border-slate-200 text-slate-700 font-medium transition-all hover:-translate-y-0.5 hover:shadow-sm">
                             <svg className="mr-2 h-4 w-4" viewBox="0 0 23 23">
                                 <path fill="#f3f3f3" d="M0 0h23v23H0z" />
                                 <path fill="#f35325" d="M1 1h10v10H1z" />
