@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
-import Footer from './components/Footer';
+
 import Home from './pages/Home';
 import ReportItem from './pages/ReportItem';
 import SearchItems from './pages/SearchItems';
@@ -18,7 +18,7 @@ import AdminChat from './pages/admin/Chat';
 import AdminStaff from './pages/admin/Staff';
 import AdminLogin from './pages/admin/Login';
 import AdminSettings from './pages/admin/Settings';
-import ChatWidget from './components/ChatWidget';
+
 import AIChatSearch from './pages/AIChatSearch';
 import Chat from './pages/Chat';
 import './App.css';
@@ -39,8 +39,8 @@ const AppLayout = ({ children }) => {
             <main className={`flex-grow ${!hideNavFooter ? 'pt-20' : ''}`}>
                 {children}
             </main>
-            {!hideNavFooter && <Footer />}
-            {!hideNavFooter && <ChatWidget />}
+
+
         </div>
     );
 };
@@ -62,7 +62,7 @@ function App() {
                         <Route path="/register" element={<Register />} />
                         <Route path="/profile" element={<Profile />} />
                         <Route path="/chat/:userId" element={<Chat />} />
-                        <Route path="/ai-search" element={<AIChatSearch />} />
+
 
                         {/* Admin Routes */}
                         <Route path="/admin/login" element={<AdminLogin />} />
@@ -73,6 +73,7 @@ function App() {
                         <Route path="/admin/chat" element={<AdminLayout><AdminChat /></AdminLayout>} />
                         <Route path="/admin/users" element={<AdminLayout><AdminUsers /></AdminLayout>} />
                         <Route path="/admin/staff" element={<AdminLayout><AdminStaff /></AdminLayout>} />
+                        <Route path="/admin/ai-search" element={<AdminLayout><AIChatSearch /></AdminLayout>} />
                         <Route path="/admin/settings" element={<AdminLayout><AdminSettings /></AdminLayout>} />
                     </Routes>
                 </AppLayout>

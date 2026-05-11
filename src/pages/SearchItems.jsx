@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
+import { useAuth } from "../context/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,6 +22,7 @@ const SearchItems = () => {
     const [type, setType] = useState('all');
     const [category, setCategory] = useState('all');
     const [sortBy, setSortBy] = useState('newest');
+    const { user: currentUser } = useAuth();
 
     const categoryIcons = {
         'electronics': Smartphone,
@@ -85,8 +87,14 @@ const SearchItems = () => {
                 <div className="max-w-7xl mx-auto px-6 py-12">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
                         <div className="space-y-1">
-                            <h1 className="text-2xl font-bold tracking-tight text-slate-900">ค้นหารายการสิ่งของ</h1>
-                            <p className="text-sm text-slate-500 font-medium tracking-normal">พบข้อมูลทั้งหมด {items.length} รายการในระบบขณะนี้</p>
+                            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+                                {currentUser && currentUser.role !== 'admin' ? 'รายการประกาศของคุณ' : 'ค้นหารายการสิ่งของ'}
+                            </h1>
+                            <p className="text-sm text-slate-500 font-medium tracking-normal">
+                                {currentUser && currentUser.role !== 'admin' 
+                                    ? `คุณมีรายการประกาศทั้งหมด ${items.length} รายการ`
+                                    : `พบข้อมูลทั้งหมด ${items.length} รายการในระบบขณะนี้`}
+                            </p>
                         </div>
                         <div className="flex items-center gap-3">
                              <Select value={sortBy} onValueChange={setSortBy}>
@@ -222,11 +230,23 @@ const SearchItems = () => {
                         <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-300 mx-auto mb-6">
                             <Search size={32} />
                         </div>
-                        <h3 className="text-xl font-bold text-slate-900 mb-2">ไม่พบข้อมูลที่ต้องการ</h3>
-                        <p className="text-slate-500 text-sm font-medium mb-8">ลองค้นหาด้วยคำที่กว้างขึ้น หรือเปลี่ยนหมวดหมู่ในการค้นหาดูอีกครั้งนะครับ</p>
-                        <Button variant="outline" className="rounded-xl font-bold border-slate-200" onClick={() => { setSearch(''); setType('all'); setCategory('all'); }}>
-                            รีเซ็ตการค้นหาทั้งหมด
-                        </Button>
+                        <h3 className="text-xl font-bold text-slate-900 mb-2">
+                            {!currentUser ? 'กรุณาเข้าสู่ระบบ' : 'ไม่พบข้อมูลที่ต้องการ'}
+                        </h3>
+                        <p className="text-slate-500 text-sm font-medium mb-8">
+                            {!currentUser 
+                                ? 'กรุณาเข้าสู่ระบบเพื่อดูรายการประกาศของคุณครับ' 
+                                : 'ลองค้นหาด้วยคำที่กว้างขึ้น หรือเปลี่ยนหมวดหมู่ในการค้นหาดูอีกครั้งนะครับ'}
+                        </p>
+                        {!currentUser ? (
+                            <Link to="/login">
+                                <Button className="rounded-xl font-bold bg-emerald-600">เข้าสู่ระบบเลย</Button>
+                            </Link>
+                        ) : (
+                            <Button variant="outline" className="rounded-xl font-bold border-slate-200" onClick={() => { setSearch(''); setType('all'); setCategory('all'); }}>
+                                รีเซ็ตการค้นหาทั้งหมด
+                            </Button>
+                        )}
                     </div>
                 ) : (
                     <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-x-10 lg:gap-y-12">

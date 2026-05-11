@@ -52,6 +52,22 @@ const getItems = asyncHandler(async (req, res) => {
     const { type, category, search, user, status } = req.query;
     let query = {};
 
+    // Filter by user:
+    // 1. If requester is admin/staff, they can see everything or filter by a specific user if provided in query.
+    // 2. If requester is a regular user, they only see THEIR OWN items.
+    // 3. If guest (not logged in), they see NOTHING (or we could show all, but user requested 'only see own').
+    
+    if (req.user && (req.user.role === 'admin' || req.user.role === 'staff')) {
+        if (user) {
+            query.user = user;
+        }
+    } else if (req.user) {
+        query.user = req.user._id;
+    } else {
+        // Guest - return empty list as they aren't a user
+        return res.status(200).json([]);
+    }
+
     // Default status to 'open' unless specified (e.g. 'all' or 'closed')
     if (status) {
         if (status !== 'all') {
@@ -66,9 +82,6 @@ const getItems = asyncHandler(async (req, res) => {
     }
     if (category) {
         query.category = category;
-    }
-    if (user) {
-        query.user = user;
     }
     if (search) {
         query.$or = [
@@ -160,8 +173,22 @@ const aiSearch = asyncHandler(async (req, res) => {
         throw new Error('Please provide a search query');
     }
 
-    // Fetch all open items to let AI filter them
-    const items = await Item.find({ status: 'open' })
+    // Filter items based on user role
+    let itemQuery = { status: 'open' };
+    if (req.user && (req.user.role === 'admin' || req.user.role === 'staff')) {
+        // Admin sees all open items
+    } else if (req.user) {
+        // User only searches their own open items
+        itemQuery.user = req.user._id;
+    } else {
+        // Guest sees nothing
+        return res.status(200).json({
+            answer: "กรุณาเข้าสู่ระบบเพื่อใช้งานระบบค้นหาอัจฉริยะครับ",
+            matches: []
+        });
+    }
+
+    const items = await Item.find(itemQuery)
         .populate('user', 'firstname lastname avatar')
         .sort({ createdAt: -1 });
 

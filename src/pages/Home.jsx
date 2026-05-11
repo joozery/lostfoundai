@@ -78,12 +78,12 @@ const Home = () => {
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-2 pt-1 animate-in fade-in duration-700 delay-100">
                             <Link to="/report/lost" className="w-full sm:w-auto">
                                 <Button className="w-full h-9 px-6 rounded-lg font-black bg-rose-500/5 text-rose-500 border border-rose-500/10 hover:bg-rose-500/10 text-[10px] uppercase tracking-widest transition-all">
-                                    <AlertCircle size={14} className="mr-2" /> Report Lost
+                                    <AlertCircle size={14} className="mr-2" /> ประกาศตามหาของ
                                 </Button>
                             </Link>
                             <Link to="/report/found" className="w-full sm:w-auto">
                                 <Button className="w-full h-9 px-6 rounded-lg font-black bg-emerald-500/5 text-emerald-500 border border-emerald-500/10 hover:bg-emerald-500/10 text-[10px] uppercase tracking-widest transition-all">
-                                    <CheckCircle2 size={14} className="mr-2" /> Report Found
+                                    <CheckCircle2 size={14} className="mr-2" /> แจ้งพบสิ่งของ
                                 </Button>
                             </Link>
                         </div>

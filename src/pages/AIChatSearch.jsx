@@ -70,8 +70,8 @@ const AIChatSearch = () => {
     };
 
     return (
-        <div className="min-h-[calc(100vh-80px)] bg-slate-50 pt-24 pb-12 px-4">
-            <div className="max-w-4xl mx-auto flex flex-col h-[750px] bg-white rounded-3xl shadow-2xl shadow-slate-200/60 border border-slate-100 overflow-hidden relative">
+        <div className="h-full bg-slate-50/50 rounded-3xl overflow-hidden">
+            <div className="max-w-5xl mx-auto flex flex-col h-[calc(100vh-180px)] bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-slate-100 overflow-hidden relative">
 
                 {/* Header */}
                 <div className="p-6 border-b border-slate-100 bg-white flex items-center justify-between shrink-0">

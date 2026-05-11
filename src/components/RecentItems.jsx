@@ -11,10 +11,12 @@ import { Badge } from "@/components/ui/badge";
 import { MapPin, Calendar, Tag, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import api from '../lib/axios';
+import { useAuth } from '../context/AuthContext';
 
 const RecentItems = () => {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
+    const { user: currentUser } = useAuth();
 
     useEffect(() => {
         const fetchItems = async () => {
@@ -48,8 +50,14 @@ const RecentItems = () => {
             <div className="max-w-7xl mx-auto px-6">
                 <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-4">
                     <div>
-                        <h2 className="text-3xl font-bold text-slate-900 mb-2">รายการล่าสุด</h2>
-                        <p className="text-slate-500">รวมรายการของหายและเจอของที่เพิ่งอัปเดตเข้ามาใหม่</p>
+                        <h2 className="text-3xl font-bold text-slate-900 mb-2">
+                            {currentUser && currentUser.role !== 'admin' ? 'ประกาศล่าสุดของคุณ' : 'รายการล่าสุด'}
+                        </h2>
+                        <p className="text-slate-500">
+                            {currentUser && currentUser.role !== 'admin' 
+                                ? 'ติดตามสถานะรายการประกาศล่าสุดที่คุณส่งเข้ามา'
+                                : 'รวมรายการของหายและเจอของที่เพิ่งอัปเดตเข้ามาใหม่'}
+                        </p>
                     </div>
                 </div>
 

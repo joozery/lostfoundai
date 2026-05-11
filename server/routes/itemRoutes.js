@@ -11,14 +11,14 @@ const {
     aiSearch
 } = require('../controllers/itemController');
 
-const { protect } = require('../middleware/authMiddleware');
+const { protect, optionalProtect } = require('../middleware/authMiddleware');
 
 const upload = multer({ storage });
 
-router.post('/ai-search', aiSearch);
+router.post('/ai-search', optionalProtect, aiSearch);
 
 router.route('/')
-    .get(getItems)
+    .get(optionalProtect, getItems)
     .post(protect, upload.array('images', 5), createItem);
 
 router.route('/:id')

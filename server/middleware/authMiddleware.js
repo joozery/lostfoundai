@@ -10,20 +10,20 @@ const protect = asyncHandler(async (req, res, next) => {
         req.headers.authorization.startsWith('Bearer')
     ) {
         try {
-            // Get token from header
             token = req.headers.authorization.split(' ')[1];
-
-            // Verify token
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-            // Get user from the token
             req.user = await User.findById(decoded.id).select('-password');
+            
+            if (!req.user) {
+                res.status(401);
+                throw new Error('Not authorized, user not found');
+            }
 
             next();
         } catch (error) {
-            console.log(error);
+            console.error(error);
             res.status(401);
-            throw new Error('Not authorized');
+            throw new Error('Not authorized, token failed');
         }
     }
 
@@ -31,6 +31,23 @@ const protect = asyncHandler(async (req, res, next) => {
         res.status(401);
         throw new Error('Not authorized, no token');
     }
+});
+
+// For routes where we WANT to know the user if logged in, but don't REQUIRE it
+const optionalProtect = asyncHandler(async (req, res, next) => {
+    if (
+        req.headers.authorization &&
+        req.headers.authorization.startsWith('Bearer')
+    ) {
+        try {
+            const token = req.headers.authorization.split(' ')[1];
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            req.user = await User.findById(decoded.id).select('-password');
+        } catch (error) {
+            // Ignore token errors for optional auth
+        }
+    }
+    next();
 });
 
 const admin = (req, res, next) => {
@@ -42,4 +59,4 @@ const admin = (req, res, next) => {
     }
 }
 
-module.exports = { protect, admin };
+module.exports = { protect, optionalProtect, admin };
